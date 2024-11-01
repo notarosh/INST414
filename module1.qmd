@@ -1,0 +1,81 @@
+---
+title: "module1"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(dplyr)
+library(Hmisc)
+
+life = read.table("~/Downloads/Life Expectancy Data.csv", sep = ",", header = TRUE)
+life
+```
+
+```{r}
+#Data cleaning: drop NAs
+
+life_clean = na.omit(life)
+
+life_clean %>%
+  dplyr::select(Life.expectancy, Schooling, HIV.AIDS)
+
+summary(life_clean)
+psych::describe(life_clean)
+```
+
+```{r}
+#Extract only numeric variables
+continuous_vars <- life_clean %>% select_if(is.numeric)
+
+#Create Correlation table 
+correlation_results <- rcorr(as.matrix(continuous_vars))
+
+# Extract correlation coefficients and p-values
+correlation_matrix <- correlation_results$r
+p_values <- correlation_results$P
+
+target_correlations <- correlation_matrix["Life.expectancy", ]
+target_p_values <- p_values["Life.expectancy", ]
+
+# Combine the correlation coefficients and p-values into a data frame
+final_correlation_table <- data.frame(
+  Variable = names(target_correlations),
+  Correlation = target_correlations,
+  P_Value = target_p_values
+)
+
+
+final_correlation_table <- final_correlation_table[order(final_correlation_table$P_Value), ]
+print(final_correlation_table)
+
+```
+
+```{r}
+ggplot(life_clean, aes(x = Schooling, y = Life.expectancy)) + 
+  geom_point() + 
+  theme_classic() + 
+  geom_smooth(method="lm") +
+  ggtitle("Relationship between schooling and life expectancy")
+
+cor(life_clean$Schooling, life_clean$Life.expectancy)
+
+```
+
+```{r}
+ggplot(life, aes(x = HIV.AIDS, y = Life.expectancy)) + geom_point() + theme_classic() + geom_smooth(method = "lm") + ggtitle("Relationship between HIVAIDS and life expectancy")
+
+cor(life_clean$HIV.AIDS, life_clean$Life.expectancy)
+```
+
+```{r}
+life_glm = glm(Life.expectancy~Schooling + HIV.AIDS, data = life_clean, family = gaussian)
+
+summary(life_glm)
+
+confint(life_glm)
+
+```
